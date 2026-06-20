@@ -221,44 +221,17 @@ def event_agent(state: TrafficState) -> TrafficState:
     }
 
 
-def fusion_agent(state: TrafficState) -> TrafficState:
+def predictor_agent(state: TrafficState) -> TrafficState:
 
+    #fused = state.get("fused_context", {})
     traffic = state.get("traffic_data", {})
     weather = state.get("weather_data", {})
     events = state.get("event_data", {})
-
-    fused_context = {
-        "city": state["city"],
-        "time_reference": state["time_reference"],
-
-        "traffic_level": traffic.get("congestion_level", "unknown"),
-        "current_speed": traffic.get("current_speed", 0),
-        "free_flow_speed": traffic.get("free_flow_speed", 0),
-
-        "weather": weather.get("weather", "unknown"),
-        "is_raining": weather.get("is_raining", False),
-        "temperature": weather.get("temperature", None),
-
-        "event_count": events.get("event_count", 0),
-        "major_event_day": events.get("major_event_day", False),
-        "top_events": events.get("major_events", [])
-    }
-
-    state["fused_context"] = fused_context
-
-    return {
-    "fused_context": fused_context
-    }
-
-
-def predictor_agent(state: TrafficState) -> TrafficState:
-
-    fused = state.get("fused_context", {})
+    
 
     risk_score = 0
 
-    # traffic
-    traffic_level = fused.get("traffic_level", "low")
+    traffic_level = traffic.get("congestion_level", "low")
 
     if traffic_level == "high":
         risk_score += 3
@@ -267,12 +240,10 @@ def predictor_agent(state: TrafficState) -> TrafficState:
     else:
         risk_score += 1
 
-    # weather 
-    if fused.get("is_raining", False):
+    if weather.get("is_raining", False):
         risk_score += 2
 
-    # event 
-    if fused.get("major_event_day", False):
+    if events.get("major_event_day", False):
         risk_score += 3
 
     if risk_score >= 7:
@@ -297,7 +268,9 @@ def predictor_agent(state: TrafficState) -> TrafficState:
 
 def explainability_agent(state: TrafficState) -> TrafficState:
 
-    fused = state.get("fused_context", {})
+    traffic = state.get("traffic_data", {})
+    weather = state.get("weather_data", {})
+    events = state.get("event_data", {})
     prediction = state.get("prediction", {})
 
     prompt = f"""
@@ -308,7 +281,7 @@ Explain the prediction in simple human language.
 Use the following information:
 
 FUSED CONTEXT:
-{fused}
+{weather,events,traffic}
 
 PREDICTION:
 {prediction}
@@ -338,7 +311,6 @@ graph.add_node("router", router_agent)
 graph.add_node("traffic", traffic_agent)
 graph.add_node("weather", weather_agent)
 graph.add_node("event", event_agent)
-graph.add_node("fusion", fusion_agent)
 graph.add_node("predictor", predictor_agent)
 graph.add_node("explainability", explainability_agent)
 
@@ -358,18 +330,17 @@ graph.add_conditional_edges(
     }
 )
 #connecting all to fusion
-graph.add_edge("traffic", "fusion")
-graph.add_edge("weather", "fusion")
-graph.add_edge("event", "fusion")
+graph.add_edge("traffic", "predictor")
+graph.add_edge("weather", "predictor")
+graph.add_edge("event", "predictor")
 
-graph.add_edge("fusion", "predictor")
 graph.add_edge("predictor", "explainability")
 graph.add_edge("explainability", END)
 
 app = graph.compile()
 
 #print("\nGRAPH STRUCTURE:\n")
-#print(app.get_graph().draw_ascii())
+print(app.get_graph().draw_ascii())
 
 print("\n🚗 Traffic Intelligence Chatbot")
 print("Type 'exit' to quit.\n")
