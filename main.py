@@ -5,6 +5,7 @@ import requests
 import json
 from dotenv import load_dotenv
 from langchain_groq import ChatGroq
+import time
 
 load_dotenv()
 
@@ -230,17 +231,14 @@ def fusion_agent(state: TrafficState) -> TrafficState:
         "city": state["city"],
         "time_reference": state["time_reference"],
 
-        # 🚗 Traffic summary
         "traffic_level": traffic.get("congestion_level", "unknown"),
         "current_speed": traffic.get("current_speed", 0),
         "free_flow_speed": traffic.get("free_flow_speed", 0),
 
-        # 🌦️ Weather summary
         "weather": weather.get("weather", "unknown"),
         "is_raining": weather.get("is_raining", False),
         "temperature": weather.get("temperature", None),
 
-        # 🎟️ Event summary
         "event_count": events.get("event_count", 0),
         "major_event_day": events.get("major_event_day", False),
         "top_events": events.get("major_events", [])
@@ -385,10 +383,13 @@ while True:
         break
 
     try:
+        start_time = time.perf_counter()
 
         result = app.invoke({
             "query": user_query
         })
+
+        end_time = time.perf_counter()
 
         print("\n🤖 Traffic Intelligence Report:")
 
@@ -398,6 +399,7 @@ while True:
 
         print("\nExplanation:")
         print(result.get("explanation", "No explanation generated"))
+        print(f"\nLatency: {end_time - start_time:.3f} seconds")
 
         print("\n" + "-" * 50 + "\n")
 
