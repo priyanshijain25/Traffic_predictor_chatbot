@@ -1,6 +1,4 @@
 # Traffic_predictor_chatbot
-
-## Overview
 Traffic Intelligence Multi-Agent System is a LangGraph-based AI application that predicts traffic conditions by combining traffic, weather, and event data from multiple external APIs.
 The system uses multiple specialized agents to gather information, reason over the collected context, estimate traffic impact, and generate human-readable explanations.
 
